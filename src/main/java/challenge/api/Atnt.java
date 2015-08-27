@@ -17,7 +17,6 @@ import classes.RecentData;
 import classes.ResponseStatus;
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
-import com.google.appengine.api.datastore.Query;
 import com.google.appengine.repackaged.com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -117,7 +116,7 @@ public class Atnt {
         return apiResponse;
     }     
     
-    private String getNow() {
+    private String getNowInString() {
         final int TIME_ZONE=8;
         final SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         GregorianCalendar now=new GregorianCalendar();
@@ -138,11 +137,11 @@ public class Atnt {
             }
             
             pi.payment=p.parkingInfo.payment;
-            pi.timeOut=getNow();
+            pi.timeOut=getNowInString();
         }
         else {
             pi.streamId=p.streamId;
-            pi.timeIn=getNow();
+            pi.timeIn=getNowInString();
             pi.dateCreated=new GregorianCalendar().getTimeInMillis();
         }
         
