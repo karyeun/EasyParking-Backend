@@ -7,6 +7,7 @@
 package challenge.api;
 
 import static challenge.services.OfyService.ofy;
+import classes.ChartData;
 import classes.Device;
 import classes.SingleValue;
 import classes.Parking;
@@ -16,6 +17,7 @@ import classes.RecentData;
 import classes.ResponseStatus;
 import com.google.api.server.spi.config.Api;
 import com.google.api.server.spi.config.ApiMethod;
+import com.google.appengine.api.datastore.Query;
 import com.google.appengine.repackaged.com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,7 +29,9 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Api(
     name = "attapi",
@@ -204,7 +208,7 @@ public class Atnt {
         return apiResponse;
     }     
     
-    @ApiMethod(httpMethod="post", path = "att/parkingInfo")
+    @ApiMethod(httpMethod="post", path = "parkingInfo")
     public ResponseStatus getParkingInfo() {
         ResponseStatus apiResponse=new ResponseStatus();
         try {
@@ -220,35 +224,56 @@ public class Atnt {
         return apiResponse;
     }         
     
-    @ApiMethod(httpMethod="post", path = "att/parkingSummary")
+    @ApiMethod(httpMethod="post", path = "parkingSummary")
     public ResponseStatus getParkingGraph(SingleValue thisDate) {
         final SimpleDateFormat sdf=new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
         
+        Map<Integer, ChartData> graph=new HashMap<>();
+        for (int idx=0; idx<24; idx++) { //24 hrs graph
+            ChartData chartData=new ChartData();
+            chartData.hours=idx;
+            graph.put(idx, chartData);
+        }
+
         ResponseStatus apiResponse=new ResponseStatus();
         try {
             String[] dates=thisDate.value.split("-");
             if(dates.length==3) {
                 GregorianCalendar calFrom=new GregorianCalendar(Integer.parseInt(dates[0]), 
-                    Integer.parseInt(dates[1]), 
+                    Integer.parseInt(dates[1])-1, 
                     Integer.parseInt(dates[2]));
                 GregorianCalendar calTo=(GregorianCalendar) calFrom.clone();
                 calTo.add(GregorianCalendar.HOUR, 24);
+
+//                System.out.println(sdf.format(calFrom.getTime())+","+
+//                        sdf.format(calTo.getTime()));
                 
-                List<ParkingInfo> parkingInfoList=ofy().load().type(ParkingInfo.class)
+                //get the date
+                List<ParkingInfo> parkingInfos=ofy().load().type(ParkingInfo.class)
                     .filter("timeIn >=", sdf.format(calFrom.getTime()))
                     .filter("timeIn <", sdf.format(calTo.getTime())).list();
 
-                
-                
+                //count the time
+                for(ParkingInfo parkingInfo:parkingInfos) {
+                    String[] datetimes=parkingInfo.timeIn.split(" ");
+                    if(datetimes.length==2) {
+                        int hours=Integer.parseInt(datetimes[1].split(":")[0]);
+                        ChartData chartData=graph.get(hours);
+                        if(parkingInfo.streamId.startsWith("A"))
+                            chartData.parkingA++;
+                        else if(parkingInfo.streamId.startsWith("B"))
+                            chartData.parkingB++;
+                    }
+                }
                 
                 apiResponse.Status=true;
-                apiResponse.Result=parkingInfoList;
+                apiResponse.Result=graph.values().toArray();
             }
             else {
                 apiResponse.Status=false;
                 apiResponse.Result="Wrong date format, use yyyy-MM-dd";
             }
-        } catch(Exception e) {
+        } catch(NumberFormatException e) {
             apiResponse.Status=false;
             apiResponse.Exception=e.toString();
         }
