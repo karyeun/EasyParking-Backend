@@ -46,9 +46,12 @@ public class Noti extends HttpServlet {
         Trigger trigger=json.fromJson(sb.toString(), Trigger.class);
         
         NotificationMessage msg=new NotificationMessage();
-        msg.Message="Device: "+trigger.device_id+",\n"+
-                "Stream: "+trigger.stream+",\n"+
-                "Trigger: "+String.valueOf(trigger.value);
+//        msg.Message="Device: "+trigger.device_id+",\n"+
+//                "Stream: "+trigger.stream+",\n"+
+//                "Trigger: "+String.valueOf(trigger.value)+",\n"+
+//                "Status: "+(trigger.value==0?"Available":"Occupied");
+        msg.Message="Parking Lot: "+trigger.stream+",\n"+
+                "Status: "+(trigger.value==0?"Available":"Occupied");        
         
         Logger.getLogger("Noti").log(Level.INFO, msg.Message);
         
